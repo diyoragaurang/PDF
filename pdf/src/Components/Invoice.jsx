@@ -1,147 +1,145 @@
 import React, { useRef } from 'react';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import Header from './Header';
-import Footer from './Footer';
-
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
+import './InvoiceStyles.css';
 
 const Invoice = ({ invoiceData }) => {
   const invoiceRef = useRef(null);
 
-  const generatePDF = () => {
-    const doc = new jsPDF();
-    
-    doc.setFontSize(40);
-    doc.text(invoiceData.company.name, 105, 20, { align: 'center' });
-    doc.setFontSize(12);
-    doc.text(invoiceData.company.address, 105, 30, { align: 'center' });
-    doc.text(`Phone: ${invoiceData.company.phone} | Email: ${invoiceData.company.email}`, 105, 35, { align: 'center' });
-    
-    doc.setFontSize(16);
-    doc.text(`Invoice #${invoiceData.invoiceNumber}`, 20, 50);
-    doc.setFontSize(10);
-    doc.text(`Date: ${invoiceData.date}`, 20, 55);
-    doc.text(`Due Date: ${invoiceData.dueDate}`, 20, 60);
-    
-    doc.text(`Bill To:`, 140, 50);
-    doc.text(`${invoiceData.client.name || 'N/A'}`, 140, 55);
-    doc.text(`${invoiceData.client.address || 'N/A'}`, 140, 60);
-    doc.text(`${invoiceData.client.email || 'N/A'}`, 140, 65);
-    
-    const tableColumn = ["Item", "Description", "Quantity", "Unit Price", "Amount"];
-    const tableRows = [];
-    
+  // Calculate item-specific tax and amount
+  const calculateItemTax = (item) => {
+    const subtotal = item.quantity * item.unitPrice;
+    const taxAmount = (subtotal * (item.taxRate || invoiceData.taxRate)) / 100;
+    return {
+      subtotal,
+      taxAmount,
+      total: subtotal + taxAmount
+    };
+  };
+
+  // Calculate totals for the entire invoice
+  const calculateTotals = () => {
+    let subtotal = 0;
+    let totalTax = 0;
+
     invoiceData.items.forEach(item => {
-      const amount = item.quantity * item.unitPrice;
-      const itemData = [
-        item.name,
-        item.description,
-        item.quantity,
-        `₹${item.unitPrice.toFixed(2)}`,
-        `₹${amount.toFixed(2)}`
-      ];
-      tableRows.push(itemData);
+      const calculation = calculateItemTax(item);
+      subtotal += calculation.subtotal;
+      totalTax += calculation.taxAmount;
+    });
+
+    return {
+      subtotal,
+      tax: totalTax,
+      total: subtotal + totalTax
+    };
+  };
+
+  const totals = calculateTotals();
+
+  const generatePDF = async () => {
+    // Create PDF from the styled HTML content
+    const element = invoiceRef.current;
+    const canvas = await html2canvas(element, {
+      scale: 2, // Higher scale for better quality
+      useCORS: true,
+      logging: false
     });
     
-    autoTable(doc, {
-      head: [tableColumn],
-      body: tableRows,
-      startY: 75,
-      theme: 'grid',
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [66, 139, 202] }
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
     });
     
-    const finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 10 : 85;
+    const imgWidth = 210; // A4 width in mm
+    const pageHeight = 297; // A4 height in mm
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
     
-    doc.text(`Subtotal: ₹${invoiceData.subtotal.toFixed(2)}`, 140, finalY);
-    doc.text(`Tax (${invoiceData.taxRate}%): ₹${invoiceData.tax.toFixed(2)}`, 140, finalY + 5);
-    doc.text(`Total: ₹${invoiceData.total.toFixed(2)}`, 140, finalY + 10);
-    
-    doc.setFontSize(8);
-    doc.text(`Thank you for your business!`, 105, finalY + 30, { align: 'center' });
-    doc.text(`Terms and Conditions: ${invoiceData.terms}`, 105, finalY + 35, { align: 'center' });
-    
-    doc.save(`Invoice_${invoiceData.invoiceNumber}.pdf`);
+    pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+    pdf.save(`Invoice_${invoiceData.invoiceNumber}.pdf`);
   };
 
   return (
-    <div>
-      <div ref={invoiceRef} className="invoice-container">
-        <Header 
-          companyName={invoiceData.company.name} 
-          logo={invoiceData.company.logo} 
-        />
+    <div className="invoice-container">
+      <div className="invoice-content" ref={invoiceRef}>
+        <div className="invoice-header">
+          <h1 className="company-name">{invoiceData.company.name}</h1>
+          <p className="company-address">{invoiceData.company.address}</p>
+          <p className="company-contact">Phone: {invoiceData.company.phone} | Email: {invoiceData.company.email}</p>
+        </div>
         
-        <div className="invoice-details">
-          <h2>Invoice #{invoiceData.invoiceNumber}</h2>
-          <div className="invoice-meta">
-            <div>
-              <p><strong>Date:</strong> {invoiceData.date}</p>
-              <p><strong>Due Date:</strong> {invoiceData.dueDate}</p>
-            </div>
-            <div className="client-info">
-              <h3>Bill To:</h3>
-              <p>{invoiceData.client.name || 'N/A'}</p>
-              <p>{invoiceData.client.address || 'N/A'}</p>
-              <p>{invoiceData.client.email || 'N/A'}</p>
-            </div>
+        <div className="invoice-info">
+          <div className="invoice-number">
+            <h2>Invoice #{invoiceData.invoiceNumber}</h2>
+            <p>Date: {invoiceData.date}</p>
+            <p>Due Date: {invoiceData.dueDate}</p>
           </div>
           
-          <table className="invoice-items">
+          <div className="client-info">
+            <h3>Bill To:</h3>
+            <p>{invoiceData.client.name || 'N/A'}</p>
+            <p>{invoiceData.client.address || 'N/A'}</p>
+            <p>{invoiceData.client.email || 'N/A'}</p>
+          </div>
+        </div>
+        
+        <div className="invoice-items">
+          <table>
             <thead>
               <tr>
                 <th>Item</th>
                 <th>Description</th>
                 <th>Quantity</th>
-                <th>Unit Price</th>
+                <th>Price</th>
+                <th>Tax Rate</th>
+                <th>Tax Amount</th>
                 <th>Amount</th>
               </tr>
             </thead>
             <tbody>
-              {invoiceData.items.length === 0 ? (
-                <tr>
-                  <td colSpan="5" className="no-items">No items added yet</td>
-                </tr>
-              ) : (
-                invoiceData.items.map((item, index) => (
+              {invoiceData.items.map((item, index) => {
+                const calculation = calculateItemTax(item);
+                return (
                   <tr key={index}>
                     <td>{item.name}</td>
                     <td>{item.description}</td>
                     <td>{item.quantity}</td>
                     <td>₹{item.unitPrice.toFixed(2)}</td>
-                    <td>₹{(item.quantity * item.unitPrice).toFixed(2)}</td>
+                    <td>{item.taxRate || invoiceData.taxRate}%</td>
+                    <td>₹{calculation.taxAmount.toFixed(2)}</td>
+                    <td>₹{calculation.total.toFixed(2)}</td>
                   </tr>
-                ))
-              )}
+                );
+              })}
             </tbody>
-            <tfoot>
-              <tr>
-                <td colSpan="4">Subtotal</td>
-                <td>₹{invoiceData.subtotal.toFixed(2)}</td>
-              </tr>
-              <tr>
-                <td colSpan="4">Tax ({invoiceData.taxRate}%)</td>
-                <td>₹{invoiceData.tax.toFixed(2)}</td>
-              </tr>
-              <tr>
-                <td colSpan="4"><strong>Total</strong></td>
-                <td><strong>₹{invoiceData.total.toFixed(2)}</strong></td>
-              </tr>
-            </tfoot>
           </table>
-          
-          <div className="invoice-notes">
-            <p><strong>Notes:</strong> {invoiceData.notes}</p>
-            <p><strong>Terms:</strong> {invoiceData.terms}</p>
+        </div>
+        
+        <div className="invoice-summary">
+          <div className="summary-item">
+            <span>Subtotal:</span>
+            <span>₹{totals.subtotal.toFixed(2)}</span>
+          </div>
+          <div className="summary-item">
+            <span>Total Tax:</span>
+            <span>₹{totals.tax.toFixed(2)}</span>
+          </div>
+          <div className="summary-item total">
+            <span>Total:</span>
+            <span>₹{totals.total.toFixed(2)}</span>
           </div>
         </div>
         
-        <Footer companyInfo={invoiceData.company} />
+        <div className="invoice-footer">
+          <p className="thank-you">Thank you for your business!</p>
+          <p className="terms">Terms and Conditions: {invoiceData.terms}</p>
+        </div>
       </div>
       
-      <button onClick={generatePDF} className="download-btn">
-        Download PDF
+      <button className="generate-pdf-btn" onClick={generatePDF}>
+        Download Invoice PDF
       </button>
     </div>
   );

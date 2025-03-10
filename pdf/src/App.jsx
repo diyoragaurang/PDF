@@ -1,6 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import Invoice from './components/Invoice';
+
+// Define tax rates for different categories
+const TAX_CATEGORIES = [
+  { id: 'default', name: 'Default', rate: 18 },
+  { id: 'food', name: 'Food', rate: 10 },
+  { id: 'electronics', name: 'Electronics', rate: 15 },
+  { id: 'clothing', name: 'Clothing', rate: 12 },
+  { id: 'services', name: 'Services', rate: 18 },
+  { id: 'books', name: 'Books', rate: 5 }
+];
+
 function App() {
   const [invoiceData, setInvoiceData] = useState({
     company: {
@@ -19,20 +30,18 @@ function App() {
       email: ""
     },
     items: [],
-    subtotal: 0,
-    taxRate: 18, 
-    tax: 0,
-    total: 0,
+    taxRate: 18, // Default tax rate 
     notes: "Payment is due within 30 days. Thank you for your business.",
     terms: "Net 30"
   });
-
 
   const [newItem, setNewItem] = useState({
     name: "",
     description: "",
     quantity: 1,
-    unitPrice: 0
+    unitPrice: 0,
+    category: "default",
+    taxRate: 18 // Default tax rate
   });
 
   const [clientInfo, setClientInfo] = useState({
@@ -42,20 +51,9 @@ function App() {
   });
 
   useEffect(() => {
-    const subtotal = invoiceData.items.reduce((sum, item) => {
-      return sum + (item.quantity * item.unitPrice);
-    }, 0);
-    
-    const tax = (subtotal * invoiceData.taxRate) / 100;
-    const total = subtotal + tax;
-    
-    setInvoiceData(prev => ({
-      ...prev,
-      subtotal,
-      tax,
-      total
-    }));
-  }, [invoiceData.items, invoiceData.taxRate]);
+    // Calculation is now done in the Invoice component
+    // This effect is left for future enhancements or to update other parts of the state
+  }, [invoiceData.items]);
 
   const handleClientChange = (e) => {
     const { name, value } = e.target;
@@ -75,10 +73,21 @@ function App() {
 
   const handleItemChange = (e) => {
     const { name, value } = e.target;
-    setNewItem({
-      ...newItem,
-      [name]: name === 'quantity' || name === 'unitPrice' ? parseFloat(value) || 0 : value
-    });
+    
+    if (name === 'category') {
+      // Find the tax rate for the selected category
+      const category = TAX_CATEGORIES.find(cat => cat.id === value);
+      setNewItem({
+        ...newItem,
+        category: value,
+        taxRate: category ? category.rate : 18 // Set tax rate based on category
+      });
+    } else {
+      setNewItem({
+        ...newItem,
+        [name]: name === 'quantity' || name === 'unitPrice' ? parseFloat(value) || 0 : value
+      });
+    }
   };
 
   const addItem = (e) => {
@@ -94,7 +103,9 @@ function App() {
       name: "",
       description: "",
       quantity: 1,
-      unitPrice: 0
+      unitPrice: 0,
+      category: "default",
+      taxRate: 18
     });
   };
 
@@ -107,18 +118,29 @@ function App() {
       items: updatedItems
     });
   };
+
   const editItem = (index, field, value) => {
     const updatedItems = [...invoiceData.items];
     
-    // Convert to number if the field is quantity or unitPrice
-    if (field === 'quantity' || field === 'unitPrice') {
-      value = parseFloat(value) || 0;
+    if (field === 'category') {
+      // Find the tax rate for the selected category
+      const category = TAX_CATEGORIES.find(cat => cat.id === value);
+      updatedItems[index] = {
+        ...updatedItems[index],
+        category: value,
+        taxRate: category ? category.rate : 18
+      };
+    } else {
+      // Convert to number if the field is quantity or unitPrice
+      if (field === 'quantity' || field === 'unitPrice') {
+        value = parseFloat(value) || 0;
+      }
+      
+      updatedItems[index] = {
+        ...updatedItems[index],
+        [field]: value
+      };
     }
-    
-    updatedItems[index] = {
-      ...updatedItems[index],
-      [field]: value
-    };
     
     setInvoiceData({
       ...invoiceData,
@@ -126,7 +148,7 @@ function App() {
     });
   };
 
-  // Handle tax rate change
+  // Handle default tax rate change
   const handleTaxRateChange = (e) => {
     const taxRate = parseFloat(e.target.value) || 0;
     setInvoiceData({
@@ -134,6 +156,26 @@ function App() {
       taxRate
     });
   };
+
+  // Calculate the invoice totals for display in the form
+  const calculateTotals = () => {
+    let subtotal = 0;
+    let totalTax = 0;
+    
+    invoiceData.items.forEach(item => {
+      const itemSubtotal = item.quantity * item.unitPrice;
+      subtotal += itemSubtotal;
+      totalTax += (itemSubtotal * (item.taxRate || invoiceData.taxRate)) / 100;
+    });
+    
+    return {
+      subtotal,
+      tax: totalTax,
+      total: subtotal + totalTax
+    };
+  };
+
+  const totals = calculateTotals();
 
   return (
     <div className="app">
@@ -241,6 +283,22 @@ function App() {
               </div>
             </div>
             
+            <div className="form-group">
+              <label htmlFor="category">Category:</label>
+              <select
+                id="category"
+                name="category"
+                value={newItem.category}
+                onChange={handleItemChange}
+              >
+                {TAX_CATEGORIES.map(category => (
+                  <option key={category.id} value={category.id}>
+                    {category.name} ({category.rate}% tax)
+                  </option>
+                ))}
+              </select>
+            </div>
+            
             <button type="submit" className="add-item-btn">Add Item</button>
           </form>
         </div>
@@ -256,64 +314,85 @@ function App() {
                   <th>Item</th>
                   <th>Description</th>
                   <th>Quantity</th>
-                  <th>Unit Price</th>
+                  <th>Price</th>
+                  <th>Category</th>
+                  <th>Tax Rate</th>
                   <th>Amount</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {invoiceData.items.map((item, index) => (
-                  <tr key={index}>
-                    <td>
-                      <input
-                        type="text"
-                        value={item.name}
-                        onChange={(e) => editItem(index, 'name', e.target.value)}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="text"
-                        value={item.description}
-                        onChange={(e) => editItem(index, 'description', e.target.value)}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="number"
-                        min="1"
-                        step="1"
-                        value={item.quantity}
-                        onChange={(e) => editItem(index, 'quantity', e.target.value)}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={item.unitPrice}
-                        onChange={(e) => editItem(index, 'unitPrice', e.target.value)}
-                      />
-                    </td>
-                    <td>₹{(item.quantity * item.unitPrice).toFixed(2)}</td>
-                    <td>
-                      <button
-                        onClick={() => removeItem(index)}
-                        className="remove-btn"
-                      >
-                        Remove
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {invoiceData.items.map((item, index) => {
+                  const itemTotal = item.quantity * item.unitPrice;
+                  const itemTax = (itemTotal * (item.taxRate || invoiceData.taxRate)) / 100;
+                  const itemTotalWithTax = itemTotal + itemTax;
+                  
+                  return (
+                    <tr key={index}>
+                      <td>
+                        <input
+                          type="text"
+                          value={item.name}
+                          onChange={(e) => editItem(index, 'name', e.target.value)}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="text"
+                          value={item.description}
+                          onChange={(e) => editItem(index, 'description', e.target.value)}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="number"
+                          min="1"
+                          step="1"
+                          value={item.quantity}
+                          onChange={(e) => editItem(index, 'quantity', e.target.value)}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={item.unitPrice}
+                          onChange={(e) => editItem(index, 'unitPrice', e.target.value)}
+                        />
+                      </td>
+                      <td>
+                        <select
+                          value={item.category || 'default'}
+                          onChange={(e) => editItem(index, 'category', e.target.value)}
+                        >
+                          {TAX_CATEGORIES.map(category => (
+                            <option key={category.id} value={category.id}>
+                              {category.name}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td>{item.taxRate || invoiceData.taxRate}%</td>
+                      <td>₹{itemTotalWithTax.toFixed(2)}</td>
+                      <td>
+                        <button
+                          onClick={() => removeItem(index)}
+                          className="remove-btn"
+                        >
+                          Remove
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )}
           
           <div className="totals-section">
             <div className="form-group">
-              <label htmlFor="taxRate">Tax Rate (%):</label>
+              <label htmlFor="taxRate">Default Tax Rate (%):</label>
               <input
                 type="number"
                 id="taxRate"
@@ -323,12 +402,13 @@ function App() {
                 value={invoiceData.taxRate}
                 onChange={handleTaxRateChange}
               />
+              <p className="help-text">This is the default tax rate for items without a specific category.</p>
             </div>
             
             <div className="totals">
-              <p><strong>Subtotal:</strong> ₹{invoiceData.subtotal.toFixed(2)}</p>
-              <p><strong>Tax ({invoiceData.taxRate}%):</strong> ₹{invoiceData.tax.toFixed(2)}</p>
-              <p className="total"><strong>Total:</strong> ₹{invoiceData.total.toFixed(2)}</p>
+              <p><strong>Subtotal:</strong> ₹{totals.subtotal.toFixed(2)}</p>
+              <p><strong>Total Tax:</strong> ₹{totals.tax.toFixed(2)}</p>
+              <p className="total"><strong>Total:</strong> ₹{totals.total.toFixed(2)}</p>
             </div>
           </div>
         </div>
@@ -338,7 +418,6 @@ function App() {
         <h2>Invoice Preview</h2>
         <Invoice invoiceData={invoiceData} />
       </div>
-     
     </div>
   );
 }

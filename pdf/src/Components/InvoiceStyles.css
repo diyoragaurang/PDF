@@ -1,0 +1,200 @@
+/* InvoiceStyles.css */
+
+.invoice-container {
+    font-family: 'Arial', sans-serif;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  
+  .invoice-content {
+    background-color: white;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  }
+  
+  .invoice-header {
+    text-align: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #eee;
+  }
+
+  .invoice-content {
+    background-color: white;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    position: relative;
+    min-height: 1000px; /* Approximate A4 height content area */
+  }
+  
+  /* ... other styles remain the same ... */
+  
+  .invoice-footer {
+    text-align: center;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+    color: #7f8c8d;
+    font-size: 14px;
+    position: absolute;
+    bottom: 30px;
+    left: 30px;
+    right: 30px;
+  }
+
+  /* Add these styles to your existing CSS file */
+
+/* Category selector styling */
+select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: #f9f9f9;
+  font-size: 14px;
+  color: black;
+}
+
+/* Tax info styling */
+.help-text {
+  font-size: 12px;
+  color: #666;
+  margin-top: 4px;
+}
+
+/* Adjust table for the new columns */
+.items-table th, .items-table td {
+  padding: 8px 5px;
+  font-size: 14px;
+}
+
+/* Make some columns narrower to fit everything */
+.items-table th:nth-child(5), /* Category */
+.items-table th:nth-child(6), /* Tax Rate */
+.items-table td:nth-child(5),
+.items-table td:nth-child(6) {
+  width: 100px;
+}
+
+/* Invoice PDF table adjustments */
+.invoice-items table th, .invoice-items table td {
+  padding: 8px 5px;
+  font-size: 13px;
+}
+
+  .company-name {
+    margin: 0;
+    font-size: 24px;
+    color: #2c3e50;
+  }
+  
+  .company-address, .company-contact {
+    margin: 5px 0;
+    font-size: 14px;
+    color: #7f8c8d;
+  }
+  
+  .invoice-info {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 30px;
+  }
+  
+  .invoice-number h2 {
+    margin: 0;
+    font-size: 18px;
+    color: #2c3e50;
+  }
+  
+  .invoice-number p, .client-info p {
+    margin: 5px 0;
+    font-size: 14px;
+    color: #34495e;
+  }
+  
+  .client-info h3 {
+    margin: 0 0 10px 0;
+    font-size: 16px;
+    color: #2c3e50;
+  }
+  
+  .invoice-items table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 30px;
+  }
+  p,th,tbody{
+    color: black;
+  }
+  
+  .invoice-items th {
+    background-color: #3498db;
+    color: white;
+    text-align: left;
+    padding: 10px;
+    font-size: 14px;
+  }
+  
+  .invoice-items td {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+    font-size: 14px;
+  }
+  
+  .invoice-items tr:nth-child(even) {
+    background-color: #f9f9f9;
+  }
+  
+  .invoice-summary {
+    margin-left: auto;
+    width: 300px;
+    margin-bottom: 30px;
+  }
+  
+  .summary-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    font-size: 14px;
+  }
+  
+  .summary-item.total {
+    font-weight: bold;
+    font-size: 16px;
+    border-top: 1px solid #eee;
+    padding-top: 10px;
+    margin-top: 5px;
+  }
+  
+  .invoice-footer {
+    text-align: center;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+    color: #7f8c8d;
+    font-size: 14px;
+  }
+  
+  .thank-you {
+    font-weight: bold;
+    color: #2c3e50;
+  }
+  
+  .generate-pdf-btn {
+    display: block;
+    margin: 20px auto;
+    padding: 10px 20px;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+  
+  .generate-pdf-btn:hover {
+    background-color: #2980b9;
+  }
